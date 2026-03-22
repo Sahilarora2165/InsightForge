@@ -12,6 +12,7 @@ import {
   User,
   ChevronDown,
   History,
+  FolderOpen,
 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { useUIStore } from '../store/uiStore'
@@ -28,7 +29,7 @@ export default function Layout() {
   const handleLogout = async () => {
     try {
       await authApi.logout()
-    } catch (error) {
+    } catch {
       // Ignore logout errors
     }
     authLogout()
@@ -38,6 +39,7 @@ export default function Layout() {
 
   const navigation = [
     { name: 'Chat', href: '/', icon: MessageSquare },
+    { name: 'Collections', href: '/collections', icon: FolderOpen },
     { name: 'History', href: '/history', icon: History },
     { name: 'Upload', href: '/upload', icon: Upload },
     { name: 'Admin', href: '/admin', icon: Settings, roles: ['admin'] },
@@ -108,7 +110,8 @@ export default function Layout() {
         {/* Header */}
         <header className="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            {filteredNavigation.find((item) => item.href === location.pathname)?.name || 'Dashboard'}
+            {filteredNavigation.find((item) => item.href === location.pathname)?.name ||
+              'Dashboard'}
           </h2>
 
           {/* User menu */}
@@ -153,12 +156,8 @@ export default function Layout() {
         </main>
       </div>
 
-      {/* Click outside to close user menu */}
       {userMenuOpen && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setUserMenuOpen(false)}
-        />
+        <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
       )}
     </div>
   )

@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
 import ChatPage from './pages/ChatPage'
 import UploadPage from './pages/UploadPage'
+import CollectionsPage from './pages/CollectionsPage'
 import { HistoryPage } from './pages/HistoryPage'
 import AdminPage from './pages/AdminPage'
 
@@ -36,6 +37,7 @@ function App() {
         }
       >
         <Route index element={<ChatPage />} />
+        <Route path="collections" element={<CollectionsPage />} />
         <Route path="history" element={<HistoryPage />} />
         <Route path="upload" element={<UploadPage />} />
         <Route

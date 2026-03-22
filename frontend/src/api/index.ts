@@ -12,6 +12,9 @@ import type {
   FeedbackRequest,
   StatsResponse,
   UserListResponse,
+  Collection,
+  CollectionListResponse,
+  CollectionMember,
 } from '../types'
 
 // ====================
@@ -57,13 +60,72 @@ export const authApi = {
 }
 
 // ====================
+// Collections API
+// ====================
+
+export const collectionsApi = {
+  list: async (): Promise<CollectionListResponse> => {
+    const response = await api.get('/api/collections')
+    return response.data
+  },
+
+  get: async (id: string): Promise<Collection> => {
+    const response = await api.get(`/api/collections/${id}`)
+    return response.data
+  },
+
+  create: async (data: { name: string; description?: string }): Promise<Collection> => {
+    const response = await api.post('/api/collections', data)
+    return response.data
+  },
+
+  update: async (id: string, data: { name?: string; description?: string }): Promise<Collection> => {
+    const response = await api.patch(`/api/collections/${id}`, data)
+    return response.data
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/api/collections/${id}`)
+  },
+
+  getMembers: async (id: string): Promise<{ members: CollectionMember[]; total: number }> => {
+    const response = await api.get(`/api/collections/${id}/members`)
+    return response.data
+  },
+
+  addMember: async (
+    collectionId: string,
+    data: { user_id: string; role: 'editor' | 'viewer' }
+  ): Promise<CollectionMember> => {
+    const response = await api.post(`/api/collections/${collectionId}/members`, data)
+    return response.data
+  },
+
+  removeMember: async (collectionId: string, membershipId: string): Promise<void> => {
+    await api.delete(`/api/collections/${collectionId}/members/${membershipId}`)
+  },
+
+  getDocuments: async (
+    collectionId: string,
+    page = 1,
+    perPage = 20
+  ): Promise<DocumentListResponse> => {
+    const params = new URLSearchParams({ page: String(page), per_page: String(perPage) })
+    const response = await api.get(`/api/collections/${collectionId}/documents?${params}`)
+    return response.data
+  },
+  
+}
+
+// ====================
 // Documents API
 // ====================
 
 export const documentsApi = {
-  list: async (page = 1, perPage = 20, status?: string): Promise<DocumentListResponse> => {
+  list: async (page = 1, perPage = 20, status?: string, collectionId?: string): Promise<DocumentListResponse> => {
     const params = new URLSearchParams({ page: String(page), per_page: String(perPage) })
     if (status) params.append('status', status)
+    if (collectionId) params.append('collection_id', collectionId)
     const response = await api.get(`/api/documents?${params}`)
     return response.data
   },
@@ -73,14 +135,19 @@ export const documentsApi = {
     return response.data
   },
 
-  upload: async (file: File, onProgress?: (progress: number) => void): Promise<DocumentUploadResponse> => {
+  upload: async (
+    file: File,
+    collectionId?: string | null,
+    onProgress?: (progress: number) => void
+  ): Promise<DocumentUploadResponse> => {
     const formData = new FormData()
     formData.append('file', file)
+    if (collectionId) {
+      formData.append('collection_id', collectionId)
+    }
 
     const response = await api.post('/api/documents', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+      headers: { 'Content-Type': 'multipart/form-data' },
       onUploadProgress: (progressEvent) => {
         if (onProgress && progressEvent.total) {
           const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total)
@@ -96,9 +163,7 @@ export const documentsApi = {
   },
 
   download: async (id: string): Promise<Blob> => {
-    const response = await api.get(`/api/documents/${id}/download`, {
-      responseType: 'blob',
-    })
+    const response = await api.get(`/api/documents/${id}/download`, { responseType: 'blob' })
     return response.data
   },
 
@@ -118,7 +183,10 @@ export const askApi = {
     return response.data
   },
 
-  getHistory: async (sessionId?: string, limit = 50): Promise<{ messages: ChatMessage[]; total: number }> => {
+  getHistory: async (
+    sessionId?: string,
+    limit = 50
+  ): Promise<{ messages: ChatMessage[]; total: number }> => {
     const params = new URLSearchParams({ limit: String(limit) })
     if (sessionId) params.append('session_id', sessionId)
     const response = await api.get(`/api/history?${params}`)
@@ -171,12 +239,20 @@ export const adminApi = {
     return response.data
   },
 
-  createUser: async (data: { email: string; password: string; name: string; role: string }): Promise<User> => {
+  createUser: async (data: {
+    email: string
+    password: string
+    name: string
+    role: string
+  }): Promise<User> => {
     const response = await api.post('/api/admin/users', data)
     return response.data
   },
 
-  updateUser: async (id: string, data: { name?: string; role?: string; is_active?: boolean }): Promise<User> => {
+  updateUser: async (
+    id: string,
+    data: { name?: string; role?: string; is_active?: boolean }
+  ): Promise<User> => {
     const response = await api.put(`/api/admin/users/${id}`, data)
     return response.data
   },
@@ -185,16 +261,29 @@ export const adminApi = {
     await api.delete(`/api/admin/users/${id}`)
   },
 
-  getAuditLogs: async (page = 1, perPage = 50): Promise<{ logs: unknown[]; total: number }> => {
+  getAuditLogs: async (
+    page = 1,
+    perPage = 50
+  ): Promise<{ logs: unknown[]; total: number }> => {
     const params = new URLSearchParams({ page: String(page), per_page: String(perPage) })
     const response = await api.get(`/api/admin/audit-logs?${params}`)
     return response.data
   },
 
-  getAllFeedback: async (page = 1, perPage = 50, type?: string): Promise<{ feedback: unknown[]; total: number }> => {
+  getAllFeedback: async (
+    page = 1,
+    perPage = 50,
+    type?: string
+  ): Promise<{ feedback: unknown[]; total: number }> => {
     const params = new URLSearchParams({ page: String(page), per_page: String(perPage) })
     if (type) params.append('type', type)
     const response = await api.get(`/api/admin/feedback?${params}`)
+    return response.data
+  },
+
+  // Add to adminApi object:
+  getPerformanceStats: async (): Promise<any> => {
+    const response = await api.get('/api/admin/performance')
     return response.data
   },
 }

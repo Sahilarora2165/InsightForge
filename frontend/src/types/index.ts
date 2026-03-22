@@ -19,6 +19,33 @@ export interface AuthResponse {
   expires_in: number
 }
 
+// Collection Types
+export interface Collection {
+  id: string
+  name: string
+  description: string | null
+  created_by: string
+  is_default: boolean
+  created_at: string
+  updated_at: string
+  document_count: number
+  member_count: number
+}
+
+export interface CollectionMember {
+  membership_id: string
+  user_id: string
+  user_name: string
+  user_email: string
+  role: 'owner' | 'editor' | 'viewer'
+  added_at: string
+}
+
+export interface CollectionListResponse {
+  collections: Collection[]
+  total: number
+}
+
 // Document Types
 export interface Document {
   id: string
@@ -31,9 +58,9 @@ export interface Document {
   page_count: number | null
   chunk_count: number
   uploaded_by: string
+  collection_id: string | null
   created_at: string
   processed_at: string | null
-  collection_id: string | null 
 }
 
 export interface DocumentListResponse {
@@ -49,6 +76,7 @@ export interface DocumentUploadResponse {
   filename: string
   status: string
   message: string
+  collection_id: string | null
 }
 
 // Citation Types
@@ -67,6 +95,7 @@ export interface AskRequest {
   top_k?: number
   alpha?: number
   session_id?: string
+  collection_id?: string | null
 }
 
 export interface AskResponse {
@@ -76,6 +105,7 @@ export interface AskResponse {
   qa_id: string
   latency_ms: number
   model_name: string
+  collection_id: string | null
 }
 
 // Chat Types

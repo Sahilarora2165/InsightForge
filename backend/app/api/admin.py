@@ -55,17 +55,47 @@ def get_stats():
     week_ago = today - timedelta(days=7)
     questions_this_week = QAHistory.query.filter(QAHistory.created_at >= week_ago).count()
     
+    # Collections stats
+    from app.models import Collection
+    total_collections = Collection.query.count()
+
+    # Top 5 most queried collections
+    top_collections = db.session.query(
+        Collection.name,
+        func.count(QAHistory.id).label('query_count')
+    ).join(
+        QAHistory, QAHistory.collection_id == Collection.id
+    ).group_by(
+        Collection.id, Collection.name
+    ).order_by(
+        func.count(QAHistory.id).desc()
+    ).limit(5).all()
+
+    # Avg latency last 100 questions
+    recent_latencies = db.session.query(QAHistory.latency_ms).filter(
+        QAHistory.latency_ms.isnot(None)
+    ).order_by(QAHistory.created_at.desc()).limit(100).all()
+    avg_latency = round(
+        sum(r.latency_ms for r in recent_latencies) / len(recent_latencies), 0
+    ) if recent_latencies else 0
+
     return jsonify({
         'total_users': total_users,
         'total_documents': total_documents,
         'total_chunks': total_chunks,
         'total_questions': total_questions,
+        'total_collections': total_collections,
         'total_feedback': total_feedback,
         'feedback_positive': feedback_positive,
         'feedback_negative': feedback_negative,
         'documents_by_status': documents_by_status,
         'questions_today': questions_today,
-        'questions_this_week': questions_this_week
+        'questions_this_week': questions_this_week,
+        'avg_latency_ms': avg_latency,
+        'top_collections': [
+            {'name': name, 'query_count': count}
+            for name, count in top_collections
+        ]
     }), 200
 
 
@@ -204,39 +234,33 @@ def update_user(user_id: str):
 @admin_bp.route('/users/<user_id>', methods=['DELETE'])
 @jwt_required()
 def delete_user(user_id: str):
-    """Delete a user."""
     identity = get_current_user_info()
     user_role = identity.get('role')
     current_user_id = identity.get('user_id')
-    
-    # Only admins can delete users
+
     if user_role != 'admin':
-        return jsonify({
-            'error': 'Forbidden',
-            'message': 'Admin access required'
-        }), 403
-    
-    # Cannot delete self
+        return jsonify({'error': 'Forbidden', 'message': 'Admin access required'}), 403
+
     if user_id == current_user_id:
-        return jsonify({
-            'error': 'Forbidden',
-            'message': 'Cannot delete your own account'
-        }), 403
-    
+        return jsonify({'error': 'Forbidden', 'message': 'Cannot delete your own account'}), 403
+
     user = User.query.get(user_id)
-    
     if not user:
+        return jsonify({'error': 'Not Found', 'message': 'User not found'}), 404
+
+    # Check if user owns any collections
+    from app.models import Collection
+    owned_collections = Collection.query.filter_by(created_by=user_id).count()
+    if owned_collections > 0:
         return jsonify({
-            'error': 'Not Found',
-            'message': 'User not found'
-        }), 404
-    
+            'error': 'Cannot Delete',
+            'message': f'User owns {owned_collections} collection(s). Reassign or delete them first.'
+        }), 409
+
     db.session.delete(user)
     db.session.commit()
-    
-    return jsonify({
-        'message': 'User deleted successfully'
-    }), 200
+
+    return jsonify({'message': 'User deleted successfully'}), 200
 
 
 @admin_bp.route('/users', methods=['POST'])
