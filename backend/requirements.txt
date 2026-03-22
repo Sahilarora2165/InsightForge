@@ -1,0 +1,63 @@
+# Backend Dependencies for InternalKnowledgeHub
+# Python 3.11+ (Updated for Python 3.14 compatibility)
+
+# Web Framework
+Flask>=3.0.0
+flask-cors>=4.0.0
+flask-jwt-extended>=4.6.0
+flask-sqlalchemy>=3.1.1
+flask-migrate>=4.0.5
+flask-compress>=1.14
+
+# API & Validation
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+marshmallow>=3.20.0
+email-validator>=2.1.0
+
+# Database
+SQLAlchemy>=2.0.23
+alembic>=1.13.0
+# psycopg2 for compatibility (Flask-SQLAlchemy expects psycopg2)
+psycopg2-binary>=2.9.9
+psycopg[binary]>=3.1.18
+
+# Async Task Queue
+celery>=5.3.4
+redis>=5.0.1
+
+# Document Processing
+# PyMuPDF - use latest for Python 3.14 support
+pymupdf>=1.24.0
+python-docx>=1.1.0
+markdown>=3.5.0
+chardet>=5.2.0
+
+# Vector Database & Embeddings
+chromadb>=0.4.18
+sentence-transformers>=2.2.2
+
+# RAG & NLP
+rank-bm25>=0.2.2
+tiktoken>=0.5.2
+
+# Security
+bcrypt>=4.1.0
+passlib>=1.7.4
+python-jose[cryptography]>=3.3.0
+
+# HTTP Client
+requests>=2.31.0
+httpx>=0.25.0
+
+# Utilities
+python-dotenv>=1.0.0
+python-multipart>=0.0.6
+pyyaml>=6.0.1
+
+# Production Server
+gunicorn>=21.2.0
+
+# Testing (install separately: pip install pytest pytest-cov)
+# pytest>=7.4.0
+# pytest-cov>=4.1.0

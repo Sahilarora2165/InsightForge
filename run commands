@@ -1,0 +1,17 @@
+Here are all the commands to run the project:
+
+1. Start Ollama (required for AI)
+ollama serve
+
+In a separate terminal, pull the models if not already done:
+ollama pull llama3
+ollama pull nomic-embed-text
+
+2. Start Backend (Flask API)
+cd /Users/sumanshuarora/Documents/coding/only_flask_new/InternalKnowledgeHub/backend
+source .venv/bin/activate
+flask run --host=0.0.0.0 --port=5000
+
+3. Start Frontend (React)
+cd /Users/sumanshuarora/Documents/coding/only_flask_new/InternalKnowledgeHub/frontend
+npm run dev

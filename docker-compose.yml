@@ -1,0 +1,146 @@
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: knowledge_hub_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: knowledge_hub
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  # Redis (Celery Broker)
+  redis:
+    image: redis:7-alpine
+    container_name: knowledge_hub_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # Ollama LLM - Use host machine's Ollama (not in Docker)
+  # Commented out - run ollama serve locally instead
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: knowledge_hub_ollama
+  #   restart: unless-stopped
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ollama_data:/root/.ollama
+  #   environment:
+  #     - OLLAMA_KEEP_ALIVE=5m
+  #     - OLLAMA_NUM_PARALLEL=1
+  #     - OLLAMA_MAX_LOADED_MODELS=1
+  #   mem_limit: 6g
+  #   entrypoint: ["/bin/sh", "-c"]
+  #   command:
+  #     - |
+  #       OLLAMA_CONTEXT_LENGTH=512 ollama serve
+  #       sleep 10
+  #       ollama pull llama3.2:1b
+  #       ollama pull nomic-embed-text
+  #       wait
+
+  # ChromaDB Vector Database
+  chroma:
+    image: chromadb/chroma:latest
+    container_name: knowledge_hub_chroma
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      - ANONYMIZED_TELEMETRY=False
+
+  # Flask Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: knowledge_hub_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - FLASK_APP=app.main:create_app
+      - FLASK_ENV=development
+      - DEBUG=true
+      - LOG_LEVEL=DEBUG
+      - SECRET_KEY=${SECRET_KEY:-your-super-secret-key-change-in-production}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-jwt-secret-key-change-in-production}
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/knowledge_hub
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - OLLAMA_MODEL=llama3.2:latest
+      - OLLAMA_EMBED_MODEL=nomic-embed-text
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      - CHROMA_PATH=/app/data/chroma
+      - UPLOAD_PATH=/app/data/uploads
+      - CORS_ORIGINS=http://localhost:80,http://localhost:3000,http://localhost
+    volumes:
+      - backend_data:/app/data
+    depends_on:
+      - db
+      - redis
+      - chroma
+
+  # Celery Worker
+  worker:
+    build:
+      context: .
+      dockerfile: ./worker/Dockerfile
+    container_name: knowledge_hub_worker
+    restart: unless-stopped
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/knowledge_hub
+      # Use host.docker.internal to connect to Ollama on your Mac
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - OLLAMA_MODEL=llama3.2:latest
+      - OLLAMA_EMBED_MODEL=nomic-embed-text
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      - CHROMA_PATH=/app/data/chroma
+      - UPLOAD_PATH=/app/data/uploads
+    volumes:
+      - backend_data:/app/data
+    depends_on:
+      - db
+      - redis
+      - backend
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://localhost:8000
+    container_name: knowledge_hub_frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  redis_data:
+  ollama_data:
+  chroma_data:
+  backend_data:
+
+networks:
+  default:
+    name: knowledge_hub_network
