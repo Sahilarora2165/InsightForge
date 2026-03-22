@@ -1,17 +1,8 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  FolderOpen,
-  Plus,
-  Trash2,
-  Edit2,
-  Check,
-  X,
-  FileText,
-  Users,
-  ChevronRight,
-  Loader2,
-  FolderPlus,
+  FolderOpen, Plus, Trash2, Edit2, Check, X,
+  FileText, Users, Loader2, MessageSquare,
 } from 'lucide-react'
 import { collectionsApi } from '../api'
 import { useUIStore } from '../store/uiStore'
@@ -24,294 +15,166 @@ export default function CollectionsPage() {
   const navigate = useNavigate()
   const { setCurrentCollectionId, setCurrentSessionId } = useUIStore()
 
-  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [showCreate, setShowCreate] = useState(false)
   const [newName, setNewName] = useState('')
-  const [newDescription, setNewDescription] = useState('')
+  const [newDesc, setNewDesc] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
-  const [editDescription, setEditDescription] = useState('')
+  const [editDesc, setEditDesc] = useState('')
 
-  // Fetch collections
-  const { data, isLoading } = useQuery({
-    queryKey: ['collections'],
-    queryFn: () => collectionsApi.list(),
-  })
+  const { data, isLoading } = useQuery({ queryKey: ['collections'], queryFn: () => collectionsApi.list() })
 
-  // Create mutation
   const createMutation = useMutation({
-    mutationFn: () =>
-      collectionsApi.create({
-        name: newName.trim(),
-        description: newDescription.trim() || undefined,
-      }),
+    mutationFn: () => collectionsApi.create({ name: newName.trim(), description: newDesc.trim() || undefined }),
     onSuccess: () => {
       toast.success('Collection created')
-      setShowCreateForm(false)
-      setNewName('')
-      setNewDescription('')
+      setShowCreate(false); setNewName(''); setNewDesc('')
       queryClient.invalidateQueries({ queryKey: ['collections'] })
     },
-    onError: () => toast.error('Failed to create collection'),
+    onError: () => toast.error('Failed to create'),
   })
 
-  // Update mutation
   const updateMutation = useMutation({
-    mutationFn: (id: string) =>
-      collectionsApi.update(id, {
-        name: editName.trim(),
-        description: editDescription.trim() || undefined,
-      }),
+    mutationFn: (id: string) => collectionsApi.update(id, { name: editName.trim(), description: editDesc.trim() || undefined }),
     onSuccess: () => {
-      toast.success('Collection updated')
+      toast.success('Updated')
       setEditingId(null)
       queryClient.invalidateQueries({ queryKey: ['collections'] })
     },
-    onError: () => toast.error('Failed to update collection'),
+    onError: () => toast.error('Failed to update'),
   })
 
-  // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: collectionsApi.delete,
-    onSuccess: () => {
-      toast.success('Collection deleted. Documents moved to uncategorized.')
-      queryClient.invalidateQueries({ queryKey: ['collections'] })
-    },
-    onError: () => toast.error('Failed to delete collection'),
+    onSuccess: () => { toast.success('Deleted'); queryClient.invalidateQueries({ queryKey: ['collections'] }) },
+    onError: () => toast.error('Failed to delete'),
   })
 
-  const startEdit = (collection: Collection) => {
-    setEditingId(collection.id)
-    setEditName(collection.name)
-    setEditDescription(collection.description || '')
+  const startEdit = (c: Collection) => {
+    setEditingId(c.id); setEditName(c.name); setEditDesc(c.description || '')
   }
 
-  const openCollectionChat = (collectionId: string) => {
-    setCurrentCollectionId(collectionId)
-    setCurrentSessionId(null)
-    navigate('/')
+  const openChat = (id: string) => {
+    setCurrentCollectionId(id); setCurrentSessionId(null); navigate('/')
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto p-6 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Collections</h2>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
-            Organize your documents into collections. Chat is scoped to one collection at a time.
+          <h2 className="text-base font-semibold" style={{ color: '#fff' }}>Collections</h2>
+          <p className="text-xs mt-0.5" style={{ color: '#555' }}>
+            Organize documents. Chat is scoped per collection.
           </p>
         </div>
-        <button
-          onClick={() => setShowCreateForm(true)}
-          className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg transition-colors"
-        >
-          <Plus size={18} />
-          New Collection
+        <button onClick={() => setShowCreate(true)} className="btn btn-primary">
+          <Plus size={13} /> New
         </button>
       </div>
 
       {/* Create form */}
-      {showCreateForm && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-primary-200 dark:border-primary-800 p-6">
-          <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <FolderPlus size={18} className="text-primary-600" />
-            Create New Collection
-          </h3>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="e.g. HR Policies, Engineering Docs"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                autoFocus
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Description
-              </label>
-              <input
-                type="text"
-                value={newDescription}
-                onChange={(e) => setNewDescription(e.target.value)}
-                placeholder="Optional description"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-              />
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => createMutation.mutate()}
-                disabled={!newName.trim() || createMutation.isPending}
-                className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
-              >
-                {createMutation.isPending ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : (
-                  <Check size={16} />
-                )}
-                Create
-              </button>
-              <button
-                onClick={() => {
-                  setShowCreateForm(false)
-                  setNewName('')
-                  setNewDescription('')
-                }}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                <X size={16} />
-                Cancel
-              </button>
-            </div>
+      {showCreate && (
+        <div className="card p-4 space-y-3 animate-fade-in">
+          <p className="text-xs font-medium" style={{ color: '#888' }}>New Collection</p>
+          <input type="text" value={newName} onChange={e => setNewName(e.target.value)}
+            placeholder="Name" autoFocus className="input px-3 py-2 text-sm" />
+          <input type="text" value={newDesc} onChange={e => setNewDesc(e.target.value)}
+            placeholder="Description (optional)" className="input px-3 py-2 text-sm" />
+          <div className="flex gap-2">
+            <button onClick={() => createMutation.mutate()} disabled={!newName.trim() || createMutation.isPending}
+              className="btn btn-primary disabled:opacity-40">
+              {createMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+              Create
+            </button>
+            <button onClick={() => { setShowCreate(false); setNewName(''); setNewDesc('') }}
+              className="btn btn-secondary">
+              <X size={12} /> Cancel
+            </button>
           </div>
         </div>
       )}
 
-      {/* Collections list */}
+      {/* List */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="animate-spin text-primary-600" size={32} />
+        <div className="flex justify-center py-16">
+          <Loader2 className="animate-spin" size={18} style={{ color: '#555' }} />
         </div>
       ) : !data?.collections.length ? (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-16 text-center">
-          <FolderOpen className="mx-auto text-gray-300 dark:text-gray-600 mb-4" size={48} />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            No collections yet
-          </h3>
-          <p className="text-gray-500 dark:text-gray-400 mb-6">
-            Create a collection to organize your documents and scope your chats.
-          </p>
-          <button
-            onClick={() => setShowCreateForm(true)}
-            className="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg transition-colors"
-          >
-            <Plus size={18} />
-            Create your first collection
+        <div className="card p-12 text-center">
+          <FolderOpen size={28} className="mx-auto mb-3" style={{ color: '#333' }} />
+          <p className="text-sm font-medium mb-1" style={{ color: '#fff' }}>No collections</p>
+          <p className="text-xs mb-4" style={{ color: '#555' }}>Create one to organize your documents.</p>
+          <button onClick={() => setShowCreate(true)} className="btn btn-primary">
+            <Plus size={12} /> Create
           </button>
         </div>
       ) : (
-        <div className="grid gap-4">
-          {data.collections.map((collection) => (
+        <div className="card overflow-hidden">
+          {data.collections.map((collection, idx) => (
             <div
               key={collection.id}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:border-primary-300 dark:hover:border-primary-700 transition-colors"
+              className="px-4 py-3.5 transition-colors"
+              style={{ borderBottom: idx < data.collections.length - 1 ? '1px solid #1a1a1a' : 'none' }}
+              onMouseEnter={e => (e.currentTarget.style.background = '#0a0a0a')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
               {editingId === collection.id ? (
-                // Edit mode
-                <div className="space-y-3">
-                  <input
-                    type="text"
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                    autoFocus
-                  />
-                  <input
-                    type="text"
-                    value={editDescription}
-                    onChange={(e) => setEditDescription(e.target.value)}
-                    placeholder="Description (optional)"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                  />
+                <div className="space-y-2">
+                  <input type="text" value={editName} onChange={e => setEditName(e.target.value)}
+                    className="input px-3 py-2 text-sm" autoFocus />
+                  <input type="text" value={editDesc} onChange={e => setEditDesc(e.target.value)}
+                    placeholder="Description (optional)" className="input px-3 py-2 text-sm" />
                   <div className="flex gap-2">
-                    <button
-                      onClick={() => updateMutation.mutate(collection.id)}
+                    <button onClick={() => updateMutation.mutate(collection.id)}
                       disabled={!editName.trim() || updateMutation.isPending}
-                      className="flex items-center gap-1 bg-primary-600 hover:bg-primary-700 text-white px-3 py-1.5 rounded-lg text-sm transition-colors disabled:opacity-50"
-                    >
-                      {updateMutation.isPending ? (
-                        <Loader2 size={14} className="animate-spin" />
-                      ) : (
-                        <Check size={14} />
-                      )}
+                      className="btn btn-primary disabled:opacity-40 py-1 px-3 text-xs">
+                      {updateMutation.isPending ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
                       Save
                     </button>
-                    <button
-                      onClick={() => setEditingId(null)}
-                      className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                    >
-                      <X size={14} />
-                      Cancel
+                    <button onClick={() => setEditingId(null)} className="btn btn-secondary py-1 px-3 text-xs">
+                      <X size={11} /> Cancel
                     </button>
                   </div>
                 </div>
               ) : (
-                // View mode
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-4 flex-1 min-w-0">
-                    <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <FolderOpen className="text-primary-600 dark:text-primary-400" size={24} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-gray-900 dark:text-white">
-                          {collection.name}
-                        </h3>
-                        {collection.is_default && (
-                          <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 px-2 py-0.5 rounded-full">
-                            Default
-                          </span>
-                        )}
-                      </div>
-                      {collection.description && (
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                          {collection.description}
-                        </p>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ background: '#111', border: '1px solid #1a1a1a' }}>
+                    <FolderOpen size={15} style={{ color: '#555' }} />
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium" style={{ color: '#fff' }}>{collection.name}</span>
+                      {collection.is_default && (
+                        <span className="badge badge-default">default</span>
                       )}
-                      <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                        <span className="flex items-center gap-1">
-                          <FileText size={14} />
-                          {collection.document_count} documents
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Users size={14} />
-                          {collection.member_count} members
-                        </span>
-                        <span>
-                          {new Date(collection.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
+                    </div>
+                    {collection.description && (
+                      <p className="text-xs mt-0.5 truncate" style={{ color: '#555' }}>{collection.description}</p>
+                    )}
+                    <div className="flex items-center gap-3 mt-1 text-xs" style={{ color: '#333' }}>
+                      <span className="flex items-center gap-1"><FileText size={10} />{collection.document_count}</span>
+                      <span className="flex items-center gap-1"><Users size={10} />{collection.member_count}</span>
+                      <span>{new Date(collection.created_at).toLocaleDateString()}</span>
                     </div>
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <button
-                      onClick={() => openCollectionChat(collection.id)}
-                      className="flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 text-white px-3 py-1.5 rounded-lg text-sm transition-colors"
-                      title="Chat with this collection"
-                    >
-                      Chat
-                      <ChevronRight size={14} />
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <button onClick={() => openChat(collection.id)}
+                      className="btn btn-secondary py-1 px-2.5 text-xs gap-1">
+                      <MessageSquare size={11} /> Chat
                     </button>
-                    <button
-                      onClick={() => startEdit(collection)}
-                      className="p-2 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-                      title="Edit collection"
-                    >
-                      <Edit2 size={16} />
+                    <button onClick={() => startEdit(collection)} className="btn-ghost p-1.5" title="Edit">
+                      <Edit2 size={13} />
                     </button>
                     {!collection.is_default && (
                       <button
-                        onClick={() => {
-                          if (
-                            confirm(
-                              `Delete "${collection.name}"? Documents will be moved to uncategorized.`
-                            )
-                          ) {
-                            deleteMutation.mutate(collection.id)
-                          }
-                        }}
+                        onClick={() => { if (confirm(`Delete "${collection.name}"?`)) deleteMutation.mutate(collection.id) }}
                         disabled={deleteMutation.isPending}
-                        className="p-2 text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50"
-                        title="Delete collection"
-                      >
-                        <Trash2 size={16} />
+                        className="btn-danger p-1.5 disabled:opacity-40" title="Delete">
+                        <Trash2 size={13} />
                       </button>
                     )}
                   </div>

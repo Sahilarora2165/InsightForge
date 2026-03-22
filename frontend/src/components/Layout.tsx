@@ -1,18 +1,9 @@
 import { useState } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import {
-  MessageSquare,
-  Upload,
-  Settings,
-  LogOut,
-  Menu,
-  X,
-  Sun,
-  Moon,
-  User,
-  ChevronDown,
-  History,
-  FolderOpen,
+  MessageSquare, Upload, Settings, LogOut,
+  History, FolderOpen, Zap, ChevronDown,
+  PanelLeftClose, PanelLeft,
 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { useUIStore } from '../store/uiStore'
@@ -23,135 +14,154 @@ export default function Layout() {
   const location = useLocation()
   const navigate = useNavigate()
   const { user, logout: authLogout } = useAuthStore()
-  const { sidebarOpen, toggleSidebar, darkMode, toggleDarkMode } = useUIStore()
+  const { sidebarOpen, toggleSidebar } = useUIStore()
   const [userMenuOpen, setUserMenuOpen] = useState(false)
 
   const handleLogout = async () => {
-    try {
-      await authApi.logout()
-    } catch {
-      // Ignore logout errors
-    }
+    try { await authApi.logout() } catch {}
     authLogout()
     navigate('/login')
-    toast.success('Logged out successfully')
+    toast.success('Signed out')
   }
 
   const navigation = [
-    { name: 'Chat', href: '/', icon: MessageSquare },
+    { name: 'Chat',        href: '/',            icon: MessageSquare },
     { name: 'Collections', href: '/collections', icon: FolderOpen },
-    { name: 'History', href: '/history', icon: History },
-    { name: 'Upload', href: '/upload', icon: Upload },
-    { name: 'Admin', href: '/admin', icon: Settings, roles: ['admin'] },
+    { name: 'History',     href: '/history',     icon: History },
+    { name: 'Upload',      href: '/upload',      icon: Upload },
+    { name: 'Admin',       href: '/admin',       icon: Settings, roles: ['admin'] },
   ]
 
-  const filteredNavigation = navigation.filter(
+  const filteredNav = navigation.filter(
     (item) => !item.roles || (user && item.roles.includes(user.role))
   )
 
   return (
-    <div className="min-h-screen flex">
-      {/* Sidebar */}
+    <div className="flex h-screen overflow-hidden" style={{ background: '#000' }}>
+      {/* ── Sidebar ── */}
       <aside
-        className={`${
-          sidebarOpen ? 'w-64' : 'w-16'
-        } bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 flex flex-col`}
+        className="flex flex-col flex-shrink-0 transition-all duration-200"
+        style={{
+          width: sidebarOpen ? '220px' : '52px',
+          background: '#000',
+          borderRight: '1px solid #1a1a1a',
+        }}
       >
-        {/* Logo */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200 dark:border-gray-700">
-          {sidebarOpen && (
-            <h1 className="text-lg font-bold text-primary-600 dark:text-primary-400">
-              KnowledgeHub
-            </h1>
+        {/* Logo row */}
+        <div className="flex items-center h-14 px-3 flex-shrink-0"
+          style={{ borderBottom: '1px solid #1a1a1a' }}>
+          {sidebarOpen ? (
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0"
+                  style={{ background: '#ffffff' }}>
+                  <Zap size={13} style={{ color: '#000000' }} />
+                </div>
+                <span className="logo-text">InsightForge</span>
+              </div>
+              <button onClick={toggleSidebar} className="btn-ghost p-1.5">
+                <PanelLeftClose size={15} />
+              </button>
+            </div>
+          ) : (
+            <button onClick={toggleSidebar} className="btn-ghost p-1.5 w-full flex justify-center">
+              <PanelLeft size={15} />
+            </button>
           )}
-          <button
-            onClick={toggleSidebar}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-          >
-            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 py-4 px-2 space-y-1">
-          {filteredNavigation.map((item) => {
+        {/* Nav */}
+        <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+          {filteredNav.map((item) => {
             const isActive = location.pathname === item.href
             return (
               <Link
                 key={item.name}
                 to={item.href}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                  isActive
-                    ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                }`}
+                className={`nav-item ${isActive ? 'active' : ''}`}
+                title={!sidebarOpen ? item.name : undefined}
               >
-                <item.icon size={20} />
+                <item.icon size={16} className="flex-shrink-0" />
                 {sidebarOpen && <span>{item.name}</span>}
               </Link>
             )
           })}
         </nav>
 
-        {/* Dark mode toggle */}
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-          <button
-            onClick={toggleDarkMode}
-            className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-          >
-            {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-            {sidebarOpen && <span>{darkMode ? 'Light Mode' : 'Dark Mode'}</span>}
-          </button>
+        {/* User row */}
+        <div className="flex-shrink-0 p-2" style={{ borderTop: '1px solid #1a1a1a' }}>
+          {sidebarOpen ? (
+            <div className="flex items-center gap-2.5 px-2 py-2 rounded-lg"
+              style={{ background: '#0a0a0a' }}>
+              <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
+                style={{ background: '#1a1a1a', border: '1px solid #222' }}>
+                <span style={{ fontSize: 11, fontWeight: 600, color: '#888' }}>
+                  {user?.name?.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium truncate" style={{ color: '#fff' }}>{user?.name}</p>
+                <p className="text-xs truncate" style={{ color: '#555', fontSize: 11 }}>{user?.role}</p>
+              </div>
+              <button onClick={handleLogout} className="btn-ghost p-1" title="Sign out">
+                <LogOut size={13} style={{ color: '#555' }} />
+              </button>
+            </div>
+          ) : (
+            <button onClick={handleLogout} className="btn-ghost w-full flex justify-center p-2" title="Sign out">
+              <LogOut size={15} />
+            </button>
+          )}
         </div>
       </aside>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col">
+      {/* ── Main ── */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Header */}
-        <header className="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            {filteredNavigation.find((item) => item.href === location.pathname)?.name ||
-              'Dashboard'}
-          </h2>
+        <header className="flex items-center justify-between h-14 px-5 flex-shrink-0"
+          style={{ borderBottom: '1px solid #1a1a1a', background: '#000' }}>
+          <span className="text-sm font-medium" style={{ color: '#fff' }}>
+            {filteredNav.find(i => i.href === location.pathname)?.name || 'InsightForge'}
+          </span>
 
-          {/* User menu */}
           <div className="relative">
             <button
               onClick={() => setUserMenuOpen(!userMenuOpen)}
-              className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors"
+              style={{ background: '#0a0a0a', border: '1px solid #1a1a1a' }}
             >
-              <div className="w-8 h-8 bg-primary-100 dark:bg-primary-900 rounded-full flex items-center justify-center">
-                <User size={16} className="text-primary-600 dark:text-primary-400" />
+              <div className="w-6 h-6 rounded-full flex items-center justify-center"
+                style={{ background: '#1a1a1a' }}>
+                <span style={{ fontSize: 11, fontWeight: 600, color: '#888' }}>
+                  {user?.name?.charAt(0).toUpperCase()}
+                </span>
               </div>
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                {user?.name}
-              </span>
-              <ChevronDown size={16} className="text-gray-500" />
+              <span className="text-xs font-medium" style={{ color: '#888' }}>{user?.name}</span>
+              <ChevronDown size={12} style={{ color: '#555' }} />
             </button>
 
             {userMenuOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
-                <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">{user?.name}</p>
-                  <p className="text-xs text-gray-500">{user?.email}</p>
-                  <p className="text-xs text-primary-600 dark:text-primary-400 capitalize">
-                    {user?.role}
-                  </p>
+              <div className="absolute right-0 mt-1.5 w-48 rounded-xl py-1 z-50 animate-fade-in"
+                style={{ background: '#0a0a0a', border: '1px solid #1a1a1a', boxShadow: '0 20px 40px rgba(0,0,0,0.8)' }}>
+                <div className="px-3 py-2.5" style={{ borderBottom: '1px solid #1a1a1a' }}>
+                  <p className="text-xs font-medium" style={{ color: '#fff' }}>{user?.name}</p>
+                  <p className="text-xs mt-0.5" style={{ color: '#555' }}>{user?.email}</p>
                 </div>
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                <button onClick={handleLogout}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-xs transition-colors"
+                  style={{ color: '#ef4444' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.08)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 >
-                  <LogOut size={16} />
-                  Logout
+                  <LogOut size={13} /> Sign out
                 </button>
               </div>
             )}
           </div>
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900 p-6">
+        {/* Page */}
+        <main className="flex-1 overflow-auto" style={{ background: '#000' }}>
           <Outlet />
         </main>
       </div>

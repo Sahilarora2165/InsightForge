@@ -2,18 +2,8 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useDropzone } from 'react-dropzone'
 import {
-  Upload,
-  FileText,
-  File,
-  Trash2,
-  RefreshCw,
-  Download,
-  CheckCircle,
-  XCircle,
-  Clock,
-  Loader2,
-  AlertCircle,
-  FolderOpen,
+  Upload, FileText, File, Trash2, RefreshCw, Download,
+  CheckCircle, XCircle, Clock, Loader2, AlertCircle, FolderOpen,
 } from 'lucide-react'
 import { documentsApi, collectionsApi } from '../api'
 import type { Document } from '../types'
@@ -23,76 +13,22 @@ export default function UploadPage() {
   const queryClient = useQueryClient()
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({})
   const [selectedCollectionId, setSelectedCollectionId] = useState<string>('')
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // Fetch collections for the dropdown
   const { data: collectionsData } = useQuery({
     queryKey: ['collections'],
     queryFn: () => collectionsApi.list(),
   })
 
-  // Fetch documents
   const { data, isLoading } = useQuery({
     queryKey: ['documents'],
     queryFn: () => documentsApi.list(1, 50),
   })
 
-  // Upload mutation
-  const uploadMutation = useMutation({
-    mutationFn: (file: File) =>
-      documentsApi.upload(
-        file,
-        selectedCollectionId || null,
-        (progress) => {
-          setUploadProgress((prev) => ({ ...prev, [file.name]: progress }))
-        }
-      ),
-    onSuccess: (_data: any, file: File) => {
-      toast.success(`${file.name} uploaded successfully`)
-      setUploadProgress((prev) => {
-        const { [file.name]: _, ...rest } = prev
-        return rest
-      })
-      queryClient.invalidateQueries({ queryKey: ['documents'] })
-      queryClient.refetchQueries({ queryKey: ['documents'] })
-      queryClient.invalidateQueries({ queryKey: ['collections'] })
-    },
-    onError: () => {
-      toast.error('Failed to upload file')
-      setUploadProgress({})
-    },
-  })
-
-  // Delete mutation
-  const deleteMutation = useMutation({
-    mutationFn: documentsApi.delete,
-    onSuccess: () => {
-      toast.success('Document deleted')
-      queryClient.invalidateQueries({ queryKey: ['documents'] })
-      queryClient.invalidateQueries({ queryKey: ['collections'] })
-    },
-    onError: () => toast.error('Failed to delete document'),
-  })
-
-  // Reprocess mutation
-  const reprocessMutation = useMutation({
-    mutationFn: documentsApi.reprocess,
-    onSuccess: () => {
-      toast.success('Document reprocessing started')
-      queryClient.invalidateQueries({ queryKey: ['documents'] })
-    },
-    onError: () => toast.error('Failed to reprocess document'),
-  })
-
-  // Poll for status updates on pending/processing documents
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
+  // Poll for pending docs
   useEffect(() => {
-    const pendingDocs = data?.documents.filter(
-      (d) => d.status === 'pending' || d.status === 'processing'
-    )
-
-    if (pendingDocs && pendingDocs.length > 0) {
-      // Start polling if not already polling
+    const pending = data?.documents.filter(d => d.status === 'pending' || d.status === 'processing')
+    if (pending && pending.length > 0) {
       if (!pollingRef.current) {
         pollingRef.current = setInterval(() => {
           queryClient.invalidateQueries({ queryKey: ['documents'] })
@@ -100,30 +36,40 @@ export default function UploadPage() {
         }, 3000)
       }
     } else {
-      // No pending docs — stop polling
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current)
-        pollingRef.current = null
-      }
+      if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null }
     }
-
-    // Cleanup on unmount
-    return () => {
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current)
-        pollingRef.current = null
-      }
-    }
+    return () => { if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null } }
   }, [data?.documents, queryClient])
 
-  const onDrop = useCallback(
-    (acceptedFiles: File[]) => {
-      acceptedFiles.forEach((file) => {
-        uploadMutation.mutate(file)
-      })
+  const uploadMutation = useMutation({
+    mutationFn: (file: File) => documentsApi.upload(file, selectedCollectionId || null,
+      (progress) => setUploadProgress(prev => ({ ...prev, [file.name]: progress }))
+    ),
+    onSuccess: (_data, file) => {
+      toast.success(`${file.name} uploaded`)
+      setUploadProgress(prev => { const { [file.name]: _, ...rest } = prev; return rest })
+      queryClient.invalidateQueries({ queryKey: ['documents'] })
+      queryClient.refetchQueries({ queryKey: ['documents'] })
+      queryClient.invalidateQueries({ queryKey: ['collections'] })
     },
-    [uploadMutation]
-  )
+    onError: () => { toast.error('Upload failed'); setUploadProgress({}) },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: documentsApi.delete,
+    onSuccess: () => { toast.success('Deleted'); queryClient.invalidateQueries({ queryKey: ['documents'] }) },
+    onError: () => toast.error('Delete failed'),
+  })
+
+  const reprocessMutation = useMutation({
+    mutationFn: documentsApi.reprocess,
+    onSuccess: () => { toast.success('Reprocessing started'); queryClient.invalidateQueries({ queryKey: ['documents'] }) },
+    onError: () => toast.error('Reprocess failed'),
+  })
+
+  const onDrop = useCallback((files: File[]) => {
+    files.forEach(f => uploadMutation.mutate(f))
+  }, [uploadMutation])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -136,226 +82,166 @@ export default function UploadPage() {
   })
 
   const getCollectionName = (collectionId: string | null) => {
-    if (!collectionId) return 'Uncategorized'
-    const collection = collectionsData?.collections.find((c) => c.id === collectionId)
-    return collection?.name || 'Unknown'
+    if (!collectionId) return 'Default'
+    return collectionsData?.collections.find(c => c.id === collectionId)?.name || '—'
   }
 
-  const getStatusIcon = (status: Document['status']) => {
-    switch (status) {
-      case 'processed':
-        return <CheckCircle className="text-green-500" size={18} />
-      case 'processing':
-        return <Loader2 className="text-blue-500 animate-spin" size={18} />
-      case 'pending':
-        return <Clock className="text-yellow-500" size={18} />
-      case 'failed':
-        return <XCircle className="text-red-500" size={18} />
-    }
-  }
+  const statusIcon = (status: Document['status']) => ({
+    processed: <CheckCircle size={13} style={{ color: '#4ade80' }} />,
+    processing: <Loader2 size={13} className="animate-spin" style={{ color: '#60a5fa' }} />,
+    pending:    <Clock size={13} style={{ color: '#fbbf24' }} />,
+    failed:     <XCircle size={13} style={{ color: '#f87171' }} />,
+  }[status])
 
-  const getStatusText = (status: Document['status']) => {
-    switch (status) {
-      case 'processed': return 'Processed'
-      case 'processing': return 'Processing...'
-      case 'pending': return 'Pending'
-      case 'failed': return 'Failed'
-    }
-  }
+  const statusLabel = (status: Document['status']) => ({
+    processed: { label: 'Processed', color: '#4ade80' },
+    processing: { label: 'Processing', color: '#60a5fa' },
+    pending:    { label: 'Pending',   color: '#fbbf24' },
+    failed:     { label: 'Failed',    color: '#f87171' },
+  }[status])
 
-  const formatFileSize = (bytes: number) => {
+  const fileIcon = (type: string) => ({
+    pdf:  <FileText size={16} style={{ color: '#888' }} />,
+    docx: <FileText size={16} style={{ color: '#888' }} />,
+    md:   <FileText size={16} style={{ color: '#888' }} />,
+  }[type] || <File size={16} style={{ color: '#555' }} />)
+
+  const formatSize = (bytes: number) => {
     if (bytes < 1024) return bytes + ' B'
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
   }
 
-  const getFileIcon = (fileType: string) => {
-    switch (fileType) {
-      case 'pdf': return <FileText className="text-red-500" size={24} />
-      case 'docx': return <FileText className="text-blue-500" size={24} />
-      case 'md': return <FileText className="text-purple-500" size={24} />
-      default: return <File className="text-gray-500" size={24} />
-    }
-  }
-
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-
+    <div className="max-w-4xl mx-auto p-6 space-y-4">
       {/* Collection selector */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
-          <FolderOpen size={16} className="text-primary-600" />
-          Upload to Collection
-        </label>
-        <select
-          value={selectedCollectionId}
-          onChange={(e) => setSelectedCollectionId(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-sm"
-        >
-          <option value="">My Documents (default)</option>
-          {collectionsData?.collections
-            .filter((c) => !c.is_default)
-            .map((collection) => (
-              <option key={collection.id} value={collection.id}>
-                {collection.name}
-                {collection.description ? ` — ${collection.description}` : ''}
-              </option>
+      <div className="card p-4 flex items-center gap-3">
+        <FolderOpen size={15} style={{ color: '#555' }} className="flex-shrink-0" />
+        <div className="flex-1">
+          <p className="text-xs font-medium mb-1" style={{ color: '#888' }}>Upload to Collection</p>
+          <select
+            value={selectedCollectionId}
+            onChange={(e) => setSelectedCollectionId(e.target.value)}
+            className="input px-2.5 py-1.5 text-xs"
+            style={{ maxWidth: 280 }}
+          >
+            <option value="">My Documents (default)</option>
+            {collectionsData?.collections.filter(c => !c.is_default).map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
             ))}
-        </select>
-        <p className="text-xs text-gray-500 mt-1">
-          Documents will be searchable only within the selected collection.
-        </p>
+          </select>
+        </div>
       </div>
 
-      {/* Upload zone */}
+      {/* Drop zone */}
       <div
         {...getRootProps()}
-        className={`border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-colors ${
-          isDragActive
-            ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-            : 'border-gray-300 dark:border-gray-600 hover:border-primary-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-        }`}
+        className="rounded-xl border-2 border-dashed p-12 text-center cursor-pointer transition-all"
+        style={{
+          borderColor: isDragActive ? '#fff' : '#1a1a1a',
+          background: isDragActive ? '#0a0a0a' : 'transparent',
+        }}
       >
         <input {...getInputProps()} />
         <div className="flex flex-col items-center">
-          <div className="w-16 h-16 bg-primary-100 dark:bg-primary-900/20 rounded-full flex items-center justify-center mb-4">
-            <Upload className="text-primary-600 dark:text-primary-400" size={32} />
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
+            style={{ background: '#0a0a0a', border: '1px solid #1a1a1a' }}>
+            <Upload size={20} style={{ color: isDragActive ? '#fff' : '#555' }} />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            {isDragActive ? 'Drop files here' : 'Upload Documents'}
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-2">
-            Drag and drop files here, or click to select files
+          <p className="text-sm font-medium mb-1" style={{ color: '#fff' }}>
+            {isDragActive ? 'Drop to upload' : 'Drop files or click to upload'}
           </p>
-          {selectedCollectionId && (
-            <p className="text-sm text-primary-600 dark:text-primary-400 font-medium">
-              → {getCollectionName(selectedCollectionId)}
-            </p>
-          )}
-          <p className="text-sm text-gray-500 mt-2">
-            Supported formats: PDF, DOCX, MD, TXT (max 50MB)
-          </p>
+          <p className="text-xs" style={{ color: '#555' }}>PDF, DOCX, MD, TXT · max 50MB</p>
         </div>
       </div>
 
-      {/* Upload progress */}
+      {/* Progress */}
       {Object.entries(uploadProgress).length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-          <h3 className="font-medium text-gray-900 dark:text-white mb-4">Uploading...</h3>
-          <div className="space-y-3">
-            {Object.entries(uploadProgress).map(([filename, progress]) => (
-              <div key={filename}>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm text-gray-700 dark:text-gray-300">{filename}</span>
-                  <span className="text-sm text-gray-500">{progress}%</span>
-                </div>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                  <div
-                    className="bg-primary-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
+        <div className="card p-4 space-y-3">
+          {Object.entries(uploadProgress).map(([filename, progress]) => (
+            <div key={filename}>
+              <div className="flex justify-between mb-1.5">
+                <span className="text-xs" style={{ color: '#888' }}>{filename}</span>
+                <span className="text-xs font-mono" style={{ color: '#555' }}>{progress}%</span>
               </div>
-            ))}
-          </div>
+              <div className="w-full h-0.5 rounded-full" style={{ background: '#1a1a1a' }}>
+                <div className="h-0.5 rounded-full transition-all" style={{ width: `${progress}%`, background: '#fff' }} />
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* Documents list */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="font-semibold text-gray-900 dark:text-white">
-            All Documents ({data?.total || 0})
-          </h3>
+      {/* Documents table */}
+      <div className="card overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid #1a1a1a' }}>
+          <span className="text-xs font-medium" style={{ color: '#888' }}>
+            Documents <span className="font-mono" style={{ color: '#555' }}>({data?.total || 0})</span>
+          </span>
         </div>
 
         {isLoading ? (
-          <div className="p-8 text-center">
-            <Loader2 className="animate-spin mx-auto text-gray-400" size={32} />
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="animate-spin" size={18} style={{ color: '#555' }} />
           </div>
         ) : data?.documents.length === 0 ? (
-          <div className="p-8 text-center">
-            <AlertCircle className="mx-auto text-gray-400 mb-2" size={32} />
-            <p className="text-gray-500">No documents uploaded yet</p>
+          <div className="flex flex-col items-center justify-center py-12 gap-2">
+            <AlertCircle size={18} style={{ color: '#333' }} />
+            <p className="text-xs" style={{ color: '#555' }}>No documents yet</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-200 dark:divide-gray-700">
-            {data?.documents.map((doc) => (
-              <div
-                key={doc.id}
-                className="p-4 flex items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-              >
-                <div className="flex-shrink-0">{getFileIcon(doc.file_type)}</div>
+          <div>
+            {data?.documents.map((doc, idx) => {
+              const sl = statusLabel(doc.status)
+              return (
+                <div key={doc.id}
+                  className="flex items-center gap-3 px-4 py-3 transition-colors"
+                  style={{ borderBottom: idx < (data.documents.length - 1) ? '1px solid #1a1a1a' : 'none' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = '#0a0a0a')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <div className="flex-shrink-0">{fileIcon(doc.file_type)}</div>
 
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 dark:text-white truncate">
-                    {doc.original_filename}
-                  </p>
-                  <div className="flex items-center gap-4 mt-1 text-sm text-gray-500 flex-wrap">
-                    <span>{formatFileSize(doc.file_size)}</span>
-                    {doc.page_count && <span>{doc.page_count} pages</span>}
-                    {doc.chunk_count > 0 && <span>{doc.chunk_count} chunks</span>}
-                    <span className="flex items-center gap-1">
-                      <FolderOpen size={12} />
-                      {getCollectionName(doc.collection_id)}
-                    </span>
-                    <span>{new Date(doc.created_at).toLocaleDateString()}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate" style={{ color: '#fff' }}>
+                      {doc.original_filename}
+                    </p>
+                    <div className="flex items-center gap-3 mt-0.5 text-xs" style={{ color: '#555' }}>
+                      <span>{formatSize(doc.file_size)}</span>
+                      {doc.page_count && <span>{doc.page_count}p</span>}
+                      <span className="flex items-center gap-1">
+                        <FolderOpen size={10} />{getCollectionName(doc.collection_id)}
+                      </span>
+                    </div>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-2">
-                  {getStatusIcon(doc.status)}
-                  <span
-                    className={`text-sm ${
-                      doc.status === 'processed' ? 'text-green-600'
-                      : doc.status === 'failed' ? 'text-red-600'
-                      : doc.status === 'processing' ? 'text-blue-600'
-                      : 'text-yellow-600'
-                    }`}
-                  >
-                    {getStatusText(doc.status)}
-                  </span>
-                </div>
-
-                {doc.error_message && (
-                  <div className="text-xs text-red-500 max-w-xs truncate" title={doc.error_message}>
-                    {doc.error_message}
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {statusIcon(doc.status)}
+                    <span className="text-xs font-mono" style={{ color: sl?.color }}>{sl?.label}</span>
                   </div>
-                )}
 
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => window.open(`/api/documents/${doc.id}/download`)}
-                    className="p-2 text-gray-400 hover:text-primary-600 transition-colors"
-                    title="Download"
-                  >
-                    <Download size={18} />
-                  </button>
-                  {doc.status === 'failed' && (
-                    <button
-                      onClick={() => reprocessMutation.mutate(doc.id)}
-                      disabled={reprocessMutation.isPending}
-                      className="p-2 text-gray-400 hover:text-blue-600 transition-colors disabled:opacity-50"
-                      title="Reprocess"
-                    >
-                      <RefreshCw size={18} />
+                  <div className="flex items-center gap-0.5 flex-shrink-0">
+                    <button onClick={() => window.open(`/api/documents/${doc.id}/download`)}
+                      className="btn-ghost p-1.5" title="Download">
+                      <Download size={13} />
                     </button>
-                  )}
-                  <button
-                    onClick={() => {
-                      if (confirm('Are you sure you want to delete this document?')) {
-                        deleteMutation.mutate(doc.id)
-                      }
-                    }}
-                    disabled={deleteMutation.isPending}
-                    className="p-2 text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50"
-                    title="Delete"
-                  >
-                    <Trash2 size={18} />
-                  </button>
+                    {doc.status === 'failed' && (
+                      <button onClick={() => reprocessMutation.mutate(doc.id)}
+                        disabled={reprocessMutation.isPending}
+                        className="btn-ghost p-1.5 disabled:opacity-40" title="Reprocess">
+                        <RefreshCw size={13} />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => { if (confirm('Delete this document?')) deleteMutation.mutate(doc.id) }}
+                      disabled={deleteMutation.isPending}
+                      className="btn-danger p-1.5 disabled:opacity-40" title="Delete">
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>

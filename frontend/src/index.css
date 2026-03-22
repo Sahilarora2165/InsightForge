@@ -2,105 +2,297 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* ── Geist font via CDN ─────────────────────────────────── */
+@font-face {
+  font-family: 'Geist';
+  src: url('https://cdn.jsdelivr.net/npm/geist@1.3.0/dist/fonts/geist-sans/Geist-Regular.woff2') format('woff2');
+  font-weight: 400; font-display: swap;
+}
+@font-face {
+  font-family: 'Geist';
+  src: url('https://cdn.jsdelivr.net/npm/geist@1.3.0/dist/fonts/geist-sans/Geist-Medium.woff2') format('woff2');
+  font-weight: 500; font-display: swap;
+}
+@font-face {
+  font-family: 'Geist';
+  src: url('https://cdn.jsdelivr.net/npm/geist@1.3.0/dist/fonts/geist-sans/Geist-SemiBold.woff2') format('woff2');
+  font-weight: 600; font-display: swap;
+}
+@font-face {
+  font-family: 'Geist';
+  src: url('https://cdn.jsdelivr.net/npm/geist@1.3.0/dist/fonts/geist-sans/Geist-Bold.woff2') format('woff2');
+  font-weight: 700; font-display: swap;
+}
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('https://cdn.jsdelivr.net/npm/geist@1.3.0/dist/fonts/geist-mono/GeistMono-Regular.woff2') format('woff2');
+  font-weight: 400; font-display: swap;
+}
+
+/* ── Reset & Base ───────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Geist', 'Inter', system-ui, sans-serif;
+  font-size: 14px;
   line-height: 1.5;
   font-weight: 400;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
+  color-scheme: dark;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
+html, body { margin: 0; padding: 0; min-height: 100vh; }
+
 body {
-  @apply bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100;
-  margin: 0;
-  min-height: 100vh;
+  background: #000000;
+  color: #ffffff;
 }
 
-/* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+/* ── Scrollbar ──────────────────────────────────────────── */
+::-webkit-scrollbar       { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #333333; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #555555; }
+
+/* ── Typography ─────────────────────────────────────────── */
+.text-primary   { color: #ffffff; }
+.text-secondary { color: #888888; }
+.text-muted     { color: #555555; }
+.text-mono      { font-family: 'Geist Mono', monospace; }
+
+/* ── Surfaces ───────────────────────────────────────────── */
+.surface-0 { background: #000000; }
+.surface-1 { background: #0a0a0a; }
+.surface-2 { background: #111111; }
+.surface-3 { background: #1a1a1a; }
+
+/* ── Borders ────────────────────────────────────────────── */
+.border-subtle  { border-color: #1a1a1a; }
+.border-default { border-color: #222222; }
+.border-strong  { border-color: #333333; }
+
+/* ── Components ─────────────────────────────────────────── */
+
+/* Card */
+.card {
+  background: #0a0a0a;
+  border: 1px solid #1a1a1a;
+  border-radius: 12px;
 }
 
-::-webkit-scrollbar-track {
-  @apply bg-gray-100 dark:bg-gray-800;
+.card-hover {
+  transition: border-color 0.15s, background 0.15s;
+}
+.card-hover:hover {
+  border-color: #333333;
+  background: #111111;
 }
 
-::-webkit-scrollbar-thumb {
-  @apply bg-gray-300 dark:bg-gray-600 rounded-full;
+/* Input */
+.input {
+  background: #0a0a0a;
+  border: 1px solid #1a1a1a;
+  border-radius: 8px;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 14px;
+  transition: border-color 0.15s;
+  width: 100%;
+}
+.input:focus {
+  outline: none;
+  border-color: #555555;
+}
+.input::placeholder { color: #333333; }
+.input:focus::placeholder { color: #444444; }
+
+select.input option { background: #111111; color: #ffffff; }
+
+/* Button primary */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  @apply bg-gray-400 dark:bg-gray-500;
+.btn-primary {
+  background: #ffffff;
+  color: #000000;
+  padding: 7px 14px;
+}
+.btn-primary:hover { background: #f0f0f0; }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-secondary {
+  background: transparent;
+  color: #888888;
+  border: 1px solid #222222;
+  padding: 7px 14px;
+}
+.btn-secondary:hover { background: #111111; color: #ffffff; border-color: #333333; }
+.btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-ghost {
+  background: transparent;
+  color: #555555;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+.btn-ghost:hover { background: #111111; color: #ffffff; }
+.btn-ghost:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-danger {
+  background: transparent;
+  color: #555555;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+.btn-danger:hover { background: rgba(239,68,68,0.1); color: #ef4444; }
+
+/* Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 100px;
+  font-family: 'Geist Mono', monospace;
+  letter-spacing: 0.02em;
+}
+.badge-default { background: #1a1a1a; color: #888888; border: 1px solid #222222; }
+.badge-white   { background: rgba(255,255,255,0.08); color: #ffffff; border: 1px solid rgba(255,255,255,0.12); }
+.badge-green   { background: rgba(34,197,94,0.1); color: #4ade80; border: 1px solid rgba(34,197,94,0.15); }
+.badge-red     { background: rgba(239,68,68,0.1); color: #f87171; border: 1px solid rgba(239,68,68,0.15); }
+.badge-yellow  { background: rgba(234,179,8,0.1); color: #fbbf24; border: 1px solid rgba(234,179,8,0.15); }
+.badge-blue    { background: rgba(59,130,246,0.1); color: #60a5fa; border: 1px solid rgba(59,130,246,0.15); }
+
+/* Divider */
+.divider { border: none; border-top: 1px solid #1a1a1a; margin: 0; }
+
+/* Sidebar nav */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #555555;
+  transition: all 0.1s;
+  text-decoration: none;
+}
+.nav-item:hover { background: #111111; color: #ffffff; }
+.nav-item.active { background: #1a1a1a; color: #ffffff; }
+
+/* Chat bubbles */
+.bubble-user {
+  background: #ffffff;
+  color: #000000;
+  border-radius: 16px;
+  border-bottom-right-radius: 4px;
+  padding: 10px 14px;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
-/* Custom focus styles */
-.focus-ring {
-  @apply focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900;
+.bubble-assistant {
+  background: #0a0a0a;
+  border: 1px solid #1a1a1a;
+  border-radius: 16px;
+  border-bottom-left-radius: 4px;
+  padding: 10px 14px;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
-/* Markdown content styling */
-.markdown-content {
-  @apply prose prose-sm dark:prose-invert max-w-none;
+/* Markdown in assistant bubble */
+.bubble-assistant .markdown-content {
+  @apply prose prose-sm prose-invert max-w-none;
+}
+.bubble-assistant .markdown-content p { margin: 0 0 8px; }
+.bubble-assistant .markdown-content p:last-child { margin: 0; }
+.bubble-assistant .markdown-content pre {
+  background: #000000;
+  border: 1px solid #1a1a1a;
+  border-radius: 8px;
+  padding: 12px;
+  overflow-x: auto;
+  font-family: 'Geist Mono', monospace;
+  font-size: 12px;
+}
+.bubble-assistant .markdown-content code {
+  background: #111111;
+  border: 1px solid #222222;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: 'Geist Mono', monospace;
+  font-size: 12px;
+}
+.bubble-assistant .markdown-content pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
 }
 
-.markdown-content pre {
-  @apply bg-gray-800 dark:bg-gray-900 rounded-lg p-4 overflow-x-auto;
+/* Shimmer loading */
+.shimmer {
+  background: linear-gradient(90deg, #111111 0%, #1a1a1a 50%, #111111 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.8s linear infinite;
 }
 
-.markdown-content code {
-  @apply bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-sm;
+/* Stat card */
+.stat-card {
+  background: #0a0a0a;
+  border: 1px solid #1a1a1a;
+  border-radius: 12px;
+  padding: 20px;
+  transition: border-color 0.15s;
+}
+.stat-card:hover { border-color: #333333; }
+
+/* Logo */
+.logo-text {
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: -0.02em;
 }
 
-.markdown-content pre code {
-  @apply bg-transparent p-0;
+/* Animations */
+.animate-fade-in  { animation: fadeIn  0.2s ease-out forwards; }
+.animate-fade-up  { animation: fadeUp  0.3s ease-out forwards; }
+.animate-slide-in { animation: slideIn 0.2s ease-out forwards; }
+
+@keyframes fadeIn  { from { opacity: 0; }                              to { opacity: 1; } }
+@keyframes fadeUp  { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideIn { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: translateX(0); } }
+
+/* Focus */
+*:focus-visible {
+  outline: 2px solid rgba(255,255,255,0.5);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
-/* Animation utilities */
-.animate-fade-in {
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Chat bubble styling */
-.chat-bubble-user {
-  @apply bg-primary-600 text-white rounded-2xl rounded-br-md px-4 py-2;
-}
-
-.chat-bubble-assistant {
-  @apply bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl rounded-bl-md px-4 py-2;
-}
-
-/* Loading dots animation */
-.loading-dots span {
-  animation: loadingDots 1.4s infinite ease-in-out both;
-}
-
-.loading-dots span:nth-child(1) {
-  animation-delay: -0.32s;
-}
-
-.loading-dots span:nth-child(2) {
-  animation-delay: -0.16s;
-}
-
-@keyframes loadingDots {
-  0%, 80%, 100% {
-    transform: scale(0);
-  }
-  40% {
-    transform: scale(1);
-  }
+/* Login grid bg */
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
 }
