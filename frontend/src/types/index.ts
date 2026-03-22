@@ -33,6 +33,7 @@ export interface Document {
   uploaded_by: string
   created_at: string
   processed_at: string | null
+  collection_id: string | null 
 }
 
 export interface DocumentListResponse {

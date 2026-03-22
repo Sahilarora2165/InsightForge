@@ -41,6 +41,7 @@ export default function UploadPage() {
         return rest
       })
       queryClient.invalidateQueries({ queryKey: ['documents'] })
+      queryClient.refetchQueries({ queryKey: ['documents'] })
     },
     onError: () => {
       toast.error('Failed to upload file')

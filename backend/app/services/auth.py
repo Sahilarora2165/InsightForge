@@ -9,7 +9,8 @@ from flask_jwt_extended import get_jwt
 
 from app.core.database import db
 from app.core.security import hash_password, verify_password, create_tokens, revoke_token
-from app.models import User, UserRole, RevokedToken, AuditLog
+from app.models import User, UserRole, RevokedToken, AuditLog, Collection, CollectionMember, CollectionMemberRole
+
 
 
 class AuthService:
@@ -17,13 +18,11 @@ class AuthService:
     
     @staticmethod
     def register_user(email: str, password: str, name: str, role: UserRole = UserRole.VIEWER) -> Tuple[User, str, str]:
-        """Register a new user."""
-        # Check if user exists
+        """Register a new user and auto-create their default collection."""
         existing_user = User.query.filter_by(email=email.lower()).first()
         if existing_user:
             raise ValueError("User with this email already exists")
-        
-        # Create user
+
         user = User(
             email=email.lower(),
             name=name,
@@ -31,16 +30,32 @@ class AuthService:
             role=role,
             is_active=True
         )
-        
+
         db.session.add(user)
+        db.session.flush()  # Get user.id without full commit
+
+        # Auto-create default "My Documents" collection for every new user.
+        # Documents uploaded without an explicit collection go here.
+        from app.models import Collection, CollectionMember, CollectionMemberRole
+        default_collection = Collection(
+            name="My Documents",
+            description="Default collection for your documents",
+            created_by=user.id,
+            is_default=True
+        )
+        db.session.add(default_collection)
+        db.session.flush()  # Get collection.id
+
+        member = CollectionMember(
+            collection_id=default_collection.id,
+            user_id=user.id,
+            role=CollectionMemberRole.OWNER
+        )
+        db.session.add(member)
         db.session.commit()
-        
-        # Create tokens
+
         access_token, refresh_token = create_tokens(user.id, user.role.value)
-        
-        # Log audit
         AuthService._log_audit(user.id, "user_registered")
-        
         return user, access_token, refresh_token
     
     @staticmethod
