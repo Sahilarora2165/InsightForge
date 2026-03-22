@@ -36,7 +36,8 @@ def ask_question():
             user_id=user_id,
             session_id=data.session_id,
             top_k=data.top_k,
-            alpha=data.alpha
+            alpha=data.alpha,
+            collection_id=data.collection_id  
         )
         
         return jsonify(result), 200

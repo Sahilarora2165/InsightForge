@@ -10,7 +10,10 @@ from app.models.models import (
     QAHistory,
     FeedbackType,
     AuditLog,
-    RevokedToken
+    RevokedToken,
+    Collection,
+    CollectionMember,
+    CollectionMemberRole
 )
 
 __all__ = [
@@ -22,5 +25,8 @@ __all__ = [
     "QAHistory",
     "FeedbackType",
     "AuditLog",
-    "RevokedToken"
+    "RevokedToken",
+    "Collection",
+    "CollectionMember",
+    "CollectionMemberRole"
 ]

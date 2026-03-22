@@ -29,33 +29,35 @@ class FeedbackTypeEnum(str, Enum):
     DOWN = "down"
 
 
+class CollectionMemberRoleEnum(str, Enum):
+    OWNER = "owner"
+    EDITOR = "editor"
+    VIEWER = "viewer"
+
+
 # ====================
 # Auth Schemas
 # ====================
 
 class UserRegisterRequest(BaseModel):
-    """Schema for user registration."""
     email: EmailStr
     password: str = Field(..., min_length=6, max_length=128)
     name: str = Field(..., min_length=1, max_length=255)
 
 
 class UserLoginRequest(BaseModel):
-    """Schema for user login."""
     email: EmailStr
     password: str
 
 
 class TokenResponse(BaseModel):
-    """Schema for token response."""
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
-    expires_in: int  # seconds
+    expires_in: int
 
 
 class UserResponse(BaseModel):
-    """Schema for user response."""
     id: str
     email: str
     name: str
@@ -69,10 +71,64 @@ class UserResponse(BaseModel):
 
 
 class UserUpdateRequest(BaseModel):
-    """Schema for updating user."""
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     role: Optional[UserRoleEnum] = None
     is_active: Optional[bool] = None
+
+
+# ====================
+# Collection Schemas
+# ====================
+
+class CollectionCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+    description: Optional[str] = Field(None, max_length=1000)
+
+
+class CollectionUpdateRequest(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    description: Optional[str] = Field(None, max_length=1000)
+
+
+class CollectionMemberResponse(BaseModel):
+    membership_id: str
+    user_id: str
+    user_name: str
+    user_email: str
+    role: CollectionMemberRoleEnum
+    added_at: datetime
+
+
+class CollectionResponse(BaseModel):
+    id: str
+    name: str
+    description: Optional[str] = None
+    created_by: str
+    is_default: bool
+    created_at: datetime
+    updated_at: datetime
+    document_count: Optional[int] = None
+    member_count: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+
+class CollectionListResponse(BaseModel):
+    collections: List[CollectionResponse]
+    total: int
+
+
+class AddMemberRequest(BaseModel):
+    user_id: str
+    role: CollectionMemberRoleEnum = CollectionMemberRoleEnum.VIEWER
+
+    @field_validator('role')
+    @classmethod
+    def role_cannot_be_owner(cls, v):
+        if v == CollectionMemberRoleEnum.OWNER:
+            raise ValueError('Cannot assign owner role via this endpoint')
+        return v
 
 
 # ====================
@@ -80,7 +136,6 @@ class UserUpdateRequest(BaseModel):
 # ====================
 
 class DocumentResponse(BaseModel):
-    """Schema for document response."""
     id: str
     filename: str
     original_filename: str
@@ -91,6 +146,7 @@ class DocumentResponse(BaseModel):
     page_count: Optional[int] = None
     chunk_count: int
     uploaded_by: str
+    collection_id: Optional[str] = None
     created_at: datetime
     processed_at: Optional[datetime] = None
 
@@ -99,7 +155,6 @@ class DocumentResponse(BaseModel):
 
 
 class DocumentListResponse(BaseModel):
-    """Schema for document list response."""
     documents: List[DocumentResponse]
     total: int
     page: int
@@ -108,11 +163,11 @@ class DocumentListResponse(BaseModel):
 
 
 class DocumentUploadResponse(BaseModel):
-    """Schema for document upload response."""
     id: str
     filename: str
     status: DocumentStatusEnum
     message: str
+    collection_id: Optional[str] = None
 
 
 # ====================
@@ -120,7 +175,6 @@ class DocumentUploadResponse(BaseModel):
 # ====================
 
 class Citation(BaseModel):
-    """Schema for a citation."""
     document_id: str
     document_name: str
     page_number: Optional[int] = None
@@ -130,25 +184,26 @@ class Citation(BaseModel):
 
 
 class AskRequest(BaseModel):
-    """Schema for ask request."""
     question: str = Field(..., min_length=1, max_length=2000)
     top_k: int = Field(default=5, ge=1, le=20)
     alpha: float = Field(default=0.7, ge=0.0, le=1.0)
     session_id: Optional[str] = None
+    # Scope the search to a specific collection.
+    # If None, search across all documents the user has access to.
+    collection_id: Optional[str] = None
 
 
 class AskResponse(BaseModel):
-    """Schema for ask response."""
     answer: str
     citations: List[Citation]
     session_id: str
     qa_id: str
     latency_ms: int
     model_name: str
+    collection_id: Optional[str] = None
 
 
 class StreamAskResponse(BaseModel):
-    """Schema for streaming ask response."""
     chunk: str
     is_complete: bool
     citations: Optional[List[Citation]] = None
@@ -161,14 +216,12 @@ class StreamAskResponse(BaseModel):
 # ====================
 
 class FeedbackRequest(BaseModel):
-    """Schema for feedback request."""
     qa_id: str
     thumb: FeedbackTypeEnum
     comment: Optional[str] = Field(None, max_length=1000)
 
 
 class FeedbackResponse(BaseModel):
-    """Schema for feedback response."""
     success: bool
     message: str
 
@@ -178,7 +231,6 @@ class FeedbackResponse(BaseModel):
 # ====================
 
 class StatsResponse(BaseModel):
-    """Schema for admin stats response."""
     total_users: int
     total_documents: int
     total_chunks: int
@@ -192,7 +244,6 @@ class StatsResponse(BaseModel):
 
 
 class UserListResponse(BaseModel):
-    """Schema for user list response."""
     users: List[UserResponse]
     total: int
     page: int
@@ -205,17 +256,16 @@ class UserListResponse(BaseModel):
 # ====================
 
 class ChatMessage(BaseModel):
-    """Schema for a chat message."""
     id: str
     question: str
     answer: str
     citations: List[Citation]
     feedback: Optional[FeedbackTypeEnum] = None
+    collection_id: Optional[str] = None
     created_at: datetime
 
 
 class ChatHistoryResponse(BaseModel):
-    """Schema for chat history response."""
     messages: List[ChatMessage]
     session_id: str
     total: int
@@ -226,13 +276,11 @@ class ChatHistoryResponse(BaseModel):
 # ====================
 
 class HealthCheckResponse(BaseModel):
-    """Schema for health check response."""
     status: str
     service: str
 
 
 class ReadinessCheckResponse(BaseModel):
-    """Schema for readiness check response."""
     ready: bool
     checks: Dict[str, bool]
 
@@ -242,7 +290,6 @@ class ReadinessCheckResponse(BaseModel):
 # ====================
 
 class ErrorResponse(BaseModel):
-    """Schema for error response."""
     error: str
     message: str
     details: Optional[Dict[str, Any]] = None
