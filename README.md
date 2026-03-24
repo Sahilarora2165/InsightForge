@@ -1,4 +1,4 @@
-# InternalKnowledgeHub
+# InsightForge
 
 A production-grade internal knowledge management system that allows employees to ask questions about internal documents and receive grounded answers with exact page/paragraph citations.
 
